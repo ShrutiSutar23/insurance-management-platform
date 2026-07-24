@@ -21,6 +21,7 @@ def create_app():
     jwt.init_app(app)
     CORS(app)
 
+    # Register blueprints
     from app.routes.customer_routes import customer_bp
     app.register_blueprint(customer_bp)
 
