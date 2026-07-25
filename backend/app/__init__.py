@@ -22,6 +22,8 @@ def create_app():
     CORS(app)
 
     from app.routes.customer_routes import customer_bp
+    from app.routes.policy_routes import policy_bp
     app.register_blueprint(customer_bp)
+    app.register_blueprint(policy_bp)
 
     return app

@@ -25,3 +25,18 @@ class Customer(db.Model):
     address = db.Column(db.String(255), nullable=True)
     email = db.Column(db.String(150), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Policy(db.Model):
+    __tablename__ = "policies"
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
+    policy_type = db.Column(db.String(50), nullable=False)
+    policy_number = db.Column(db.String(50), unique=True, nullable=False)
+    premium_amount = db.Column(db.Numeric(10, 2), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), default="active")  # active, expired, cancelled
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    customer = db.relationship("Customer", backref="policies")
