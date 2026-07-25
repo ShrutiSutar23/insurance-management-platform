@@ -40,3 +40,41 @@ class Policy(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     customer = db.relationship("Customer", backref="policies")
+
+class PremiumPayment(db.Model):
+    __tablename__ = "premium_payments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    policy_id = db.Column(db.Integer, db.ForeignKey("policies.id"), nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
+    due_date = db.Column(db.Date, nullable=False)
+    payment_date = db.Column(db.Date, nullable=True)
+    payment_status = db.Column(db.String(20), default="pending")  # pending, paid, overdue
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    policy = db.relationship("Policy", backref="payments")
+
+class Claim(db.Model):
+    __tablename__ = "claims"
+
+    id = db.Column(db.Integer, primary_key=True)
+    policy_id = db.Column(db.Integer, db.ForeignKey("policies.id"), nullable=False)
+    claim_amount = db.Column(db.Numeric(10, 2), nullable=False)
+    reason = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(20), default="pending")  # pending, approved, rejected
+    submission_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    policy = db.relationship("Policy", backref="claims")
+
+class Document(db.Model):
+    __tablename__ = "documents"
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
+    file_name = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    document_type = db.Column(db.String(50), nullable=True)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    customer = db.relationship("Customer", backref="documents")
+

@@ -1,0 +1,101 @@
+from flask import Blueprint, request, jsonify
+from app import db
+from app.models import Claim, Policy
+
+claim_bp = Blueprint("claim_bp", __name__)
+
+
+# 1. Submit a new claim
+@claim_bp.route("/api/claims", methods=["POST"])
+def submit_claim():
+    data = request.get_json()
+
+    required_fields = ["policy_id", "claim_amount", "reason"]
+    for field in required_fields:
+        if field not in data or data[field] in [None, ""]:
+            return jsonify({"error": f"{field} is required"}), 400
+
+    policy = Policy.query.get(data["policy_id"])
+    if not policy:
+        return jsonify({"error": "Policy not found"}), 404
+
+    # Only allow claims on active policies
+    if policy.status != "active":
+        return jsonify({"error": "Claims can only be submitted for active policies"}), 400
+
+    new_claim = Claim(
+        policy_id=data["policy_id"],
+        claim_amount=data["claim_amount"],
+        reason=data["reason"],
+        status="pending"
+    )
+    db.session.add(new_claim)
+    db.session.commit()
+
+    return jsonify({
+        "message": "Claim submitted successfully",
+        "claim_id": new_claim.id
+    }), 201
+
+
+# 2. View all claims
+@claim_bp.route("/api/claims", methods=["GET"])
+def get_claims():
+    claims = Claim.query.all()
+
+    result = []
+    for c in claims:
+        result.append({
+            "id": c.id,
+            "policy_id": c.policy_id,
+            "policy_number": c.policy.policy_number,
+            "claim_amount": float(c.claim_amount),
+            "reason": c.reason,
+            "status": c.status,
+            "submission_date": str(c.submission_date)
+        })
+
+    return jsonify(result), 200
+
+
+# 3. View claims for a specific policy
+@claim_bp.route("/api/policies/<int:policy_id>/claims", methods=["GET"])
+def get_claims_by_policy(policy_id):
+    policy = Policy.query.get(policy_id)
+    if not policy:
+        return jsonify({"error": "Policy not found"}), 404
+
+    claims = Claim.query.filter_by(policy_id=policy_id).all()
+
+    result = []
+    for c in claims:
+        result.append({
+            "id": c.id,
+            "claim_amount": float(c.claim_amount),
+            "reason": c.reason,
+            "status": c.status,
+            "submission_date": str(c.submission_date)
+        })
+
+    return jsonify(result), 200
+
+
+# 4. Approve or reject a claim
+@claim_bp.route("/api/claims/<int:claim_id>/review", methods=["PUT"])
+def review_claim(claim_id):
+    data = request.get_json()
+
+    if "status" not in data or data["status"] not in ["approved", "rejected"]:
+        return jsonify({"error": "status must be 'approved' or 'rejected'"}), 400
+
+    claim = Claim.query.get(claim_id)
+    if not claim:
+        return jsonify({"error": "Claim not found"}), 404
+
+    if claim.status != "pending":
+        return jsonify({"error": f"Claim already {claim.status}, cannot review again"}), 400
+
+    claim.status = data["status"]
+    db.session.commit()
+
+    return jsonify({"message": f"Claim {data['status']} successfully"}), 200
