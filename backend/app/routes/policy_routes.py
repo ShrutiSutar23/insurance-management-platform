@@ -50,10 +50,20 @@ def create_policy():
     }), 201
 
 
-# 2. View all policies
+# 2. View all policies (with status filter + pagination)
 @policy_bp.route("/api/policies", methods=["GET"])
 def get_policies():
-    policies = Policy.query.all()
+    status = request.args.get("status", "", type=str)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+
+    query = Policy.query
+
+    if status:
+        query = query.filter(Policy.status == status)
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    policies = pagination.items
 
     result = []
     for p in policies:
@@ -69,8 +79,17 @@ def get_policies():
             "status": p.status
         })
 
-    return jsonify(result), 200
-
+    return jsonify({
+        "data": result,
+        "pagination": {
+            "total_items": pagination.total,
+            "total_pages": pagination.pages,
+            "current_page": pagination.page,
+            "per_page": pagination.per_page,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        }
+    }), 200
 
 # 3. View policies for a specific customer
 @policy_bp.route("/api/customers/<int:customer_id>/policies", methods=["GET"])

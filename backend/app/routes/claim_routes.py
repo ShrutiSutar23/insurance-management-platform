@@ -38,10 +38,20 @@ def submit_claim():
     }), 201
 
 
-# 2. View all claims
+# 2. View all claims (with status filter + pagination)
 @claim_bp.route("/api/claims", methods=["GET"])
 def get_claims():
-    claims = Claim.query.all()
+    status = request.args.get("status", "", type=str)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+
+    query = Claim.query
+
+    if status:
+        query = query.filter(Claim.status == status)
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    claims = pagination.items
 
     result = []
     for c in claims:
@@ -55,8 +65,17 @@ def get_claims():
             "submission_date": str(c.submission_date)
         })
 
-    return jsonify(result), 200
-
+    return jsonify({
+        "data": result,
+        "pagination": {
+            "total_items": pagination.total,
+            "total_pages": pagination.pages,
+            "current_page": pagination.page,
+            "per_page": pagination.per_page,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        }
+    }), 200
 
 # 3. View claims for a specific policy
 @claim_bp.route("/api/policies/<int:policy_id>/claims", methods=["GET"])

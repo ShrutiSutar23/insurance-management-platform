@@ -52,10 +52,26 @@ def register_customer():
     }), 201
 
 
-# 2. View all customers
+# 2. View all customers (with search + pagination)
 @customer_bp.route("/api/customers", methods=["GET"])
 def get_customers():
-    customers = Customer.query.all()
+    search = request.args.get("search", "", type=str)
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 10, type=int)
+
+    query = Customer.query
+
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Customer.name.ilike(search_pattern),
+                Customer.email.ilike(search_pattern)
+            )
+        )
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    customers = pagination.items
 
     result = []
     for c in customers:
@@ -68,7 +84,17 @@ def get_customers():
             "dob": str(c.dob) if c.dob else None
         })
 
-    return jsonify(result), 200
+    return jsonify({
+        "data": result,
+        "pagination": {
+            "total_items": pagination.total,
+            "total_pages": pagination.pages,
+            "current_page": pagination.page,
+            "per_page": pagination.per_page,
+            "has_next": pagination.has_next,
+            "has_prev": pagination.has_prev
+        }
+    }), 200
 
 
 # 3. View a single customer by ID

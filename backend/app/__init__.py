@@ -26,10 +26,12 @@ def create_app():
     from app.routes.payment_routes import payment_bp
     from app.routes.claim_routes import claim_bp
     from app.routes.document_routes import document_bp
+    from app.routes.report_routes import report_bp
     app.register_blueprint(customer_bp)
     app.register_blueprint(policy_bp)
     app.register_blueprint(payment_bp)
     app.register_blueprint(claim_bp)
     app.register_blueprint(document_bp)
+    app.register_blueprint(report_bp)
 
     return app
