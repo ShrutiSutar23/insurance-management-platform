@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify, send_from_directory, current_app
 from werkzeug.utils import secure_filename
 from app import db
 from app.models import Document, Customer
+from app.utils import role_required
 
 document_bp = Blueprint("document_bp", __name__)
 
@@ -17,6 +18,7 @@ def allowed_file(filename):
 
 # 1. Upload a document for a customer
 @document_bp.route("/api/customers/<int:customer_id>/documents", methods=["POST"])
+@role_required("admin", "agent", "customer")
 def upload_document(customer_id):
     customer = Customer.query.get(customer_id)
     if not customer:
@@ -59,6 +61,7 @@ def upload_document(customer_id):
 
 # 2. View all documents for a customer
 @document_bp.route("/api/customers/<int:customer_id>/documents", methods=["GET"])
+@role_required("admin", "agent", "customer")
 def get_documents(customer_id):
     customer = Customer.query.get(customer_id)
     if not customer:
@@ -80,6 +83,7 @@ def get_documents(customer_id):
 
 # 3. Download a specific document
 @document_bp.route("/api/documents/<int:document_id>/download", methods=["GET"])
+@role_required("admin", "agent", "customer")
 def download_document(document_id):
     document = Document.query.get(document_id)
     if not document:

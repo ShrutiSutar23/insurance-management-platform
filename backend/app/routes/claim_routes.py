@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app import db
 from app.models import Claim, Policy
+from app.utils import role_required
 
 claim_bp = Blueprint("claim_bp", __name__)
 
@@ -11,6 +12,18 @@ def submit_claim():
     data = request.get_json()
 
     required_fields = ["policy_id", "claim_amount", "reason"]
+    # Extra validation: claim_amount must be positive
+    try:
+        claim_amount = float(data["claim_amount"])
+        if claim_amount <= 0:
+            return jsonify({"error": "claim_amount must be greater than 0"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "claim_amount must be a valid number"}), 400
+
+    # Extra validation: reason must be meaningful, not just spaces
+    if not data["reason"].strip():
+        return jsonify({"error": "reason cannot be empty or just spaces"}), 400
+
     for field in required_fields:
         if field not in data or data[field] in [None, ""]:
             return jsonify({"error": f"{field} is required"}), 400
@@ -98,9 +111,9 @@ def get_claims_by_policy(policy_id):
 
     return jsonify(result), 200
 
-
-# 4. Approve or reject a claim
+# 4. Approve or reject a claim (Admin/Agent only)
 @claim_bp.route("/api/claims/<int:claim_id>/review", methods=["PUT"])
+@role_required("admin", "agent")
 def review_claim(claim_id):
     data = request.get_json()
 

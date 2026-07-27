@@ -2,12 +2,14 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models import Policy, Customer
 from datetime import datetime
+from app.utils import role_required
 
 policy_bp = Blueprint("policy_bp", __name__)
 
 
 # 1. Create a new policy
 @policy_bp.route("/api/policies", methods=["POST"])
+@role_required("admin", "agent")
 def create_policy():
     data = request.get_json()
 
@@ -16,6 +18,14 @@ def create_policy():
         if field not in data or data[field] in [None, ""]:
             return jsonify({"error": f"{field} is required"}), 400
 
+    # Extra validation: premium amount must be positive
+    try:
+        premium = float(data["premium_amount"])
+        if premium <= 0:
+            return jsonify({"error": "premium_amount must be greater than 0"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "premium_amount must be a valid number"}), 400
+    
     # Check the customer actually exists
     customer = Customer.query.get(data["customer_id"])
     if not customer:
@@ -29,6 +39,9 @@ def create_policy():
     try:
         start_date = datetime.strptime(data["start_date"], "%Y-%m-%d").date()
         end_date = datetime.strptime(data["end_date"], "%Y-%m-%d").date()
+        # Extra validation: end_date must be after start_date
+        if end_date <= start_date:
+            return jsonify({"error": "end_date must be after start_date"}), 400
     except ValueError:
         return jsonify({"error": "Dates must be in YYYY-MM-DD format"}), 400
 
@@ -115,8 +128,9 @@ def get_policies_by_customer(customer_id):
     return jsonify(result), 200
 
 
-# 4. Cancel a policy
+# 4. Cancel a policy (Admin/Agent only)
 @policy_bp.route("/api/policies/<int:policy_id>/cancel", methods=["PUT"])
+@role_required("admin", "agent")
 def cancel_policy(policy_id):
     policy = Policy.query.get(policy_id)
     if not policy:
@@ -126,3 +140,33 @@ def cancel_policy(policy_id):
     db.session.commit()
 
     return jsonify({"message": "Policy cancelled successfully"}), 200
+
+# Renew a policy (extends end_date, only for active or expired policies)
+@policy_bp.route("/api/policies/<int:policy_id>/renew", methods=["PUT"])
+@role_required("admin", "agent")
+def renew_policy(policy_id):
+    policy = Policy.query.get(policy_id)
+    if not policy:
+        return jsonify({"error": "Policy not found"}), 404
+
+    if policy.status == "cancelled":
+        return jsonify({"error": "Cancelled policies cannot be renewed"}), 400
+
+    data = request.get_json()
+
+    if "new_end_date" not in data or not data["new_end_date"]:
+        return jsonify({"error": "new_end_date is required"}), 400
+
+    try:
+        new_end_date = datetime.strptime(data["new_end_date"], "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"error": "new_end_date must be in YYYY-MM-DD format"}), 400
+
+    if new_end_date <= policy.end_date:
+        return jsonify({"error": "new_end_date must be after the current end_date"}), 400
+
+    policy.end_date = new_end_date
+    policy.status = "active"  # reactivate if it was expired
+    db.session.commit()
+
+    return jsonify({"message": "Policy renewed successfully", "new_end_date": str(policy.end_date)}), 200

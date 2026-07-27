@@ -3,11 +3,13 @@ from app import db
 from app.models import Customer, Policy, Claim, PremiumPayment
 from sqlalchemy import func, extract
 from datetime import datetime
+from app.utils import role_required
 
 report_bp = Blueprint("report_bp", __name__)
 
 
 @report_bp.route("/api/reports/dashboard", methods=["GET"])
+@role_required("admin")
 def dashboard_summary():
 
     # 1. Policy counts by status

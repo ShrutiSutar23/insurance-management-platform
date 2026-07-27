@@ -12,6 +12,14 @@ def create_payment():
     data = request.get_json()
 
     required_fields = ["policy_id", "amount", "due_date"]
+    # Extra validation: amount must be positive
+    try:
+        amount = float(data["amount"])
+        if amount <= 0:
+            return jsonify({"error": "amount must be greater than 0"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "amount must be a valid number"}), 400
+
     for field in required_fields:
         if field not in data or data[field] in [None, ""]:
             return jsonify({"error": f"{field} is required"}), 400
