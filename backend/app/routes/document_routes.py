@@ -93,3 +93,21 @@ def download_document(document_id):
     filename = os.path.basename(document.file_path)
 
     return send_from_directory(directory, filename, as_attachment=True)
+
+# 4. Delete a document
+@document_bp.route("/api/documents/<int:document_id>", methods=["DELETE"])
+@role_required("admin", "agent", "customer")
+def delete_document(document_id):
+    document = Document.query.get(document_id)
+    if not document:
+        return jsonify({"error": "Document not found"}), 404
+
+    # Remove the actual file from disk
+    if os.path.exists(document.file_path):
+        os.remove(document.file_path)
+
+    db.session.delete(document)
+    db.session.commit()
+
+    return jsonify({"message": "Document deleted successfully"}), 200
+
