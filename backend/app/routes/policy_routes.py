@@ -3,6 +3,10 @@ from app import db
 from app.models import Policy, Customer
 from datetime import datetime
 from app.utils import role_required
+from app.models import PolicyRequest
+from app.models import PremiumPayment
+from app.utils import notify
+from app.models import Customer
 
 policy_bp = Blueprint("policy_bp", __name__)
 
@@ -55,7 +59,27 @@ def create_policy():
         status="active"
     )
     db.session.add(new_policy)
+    # If this policy fulfills a pending request, mark it approved
+    if data.get("fulfilled_request_id"):
+            req = PolicyRequest.query.get(data["fulfilled_request_id"])
+            if req and req.status == "pending":
+                req.status = "approved"
+
+    # Automatically create the first premium payment due (due immediately at policy start)
+    first_payment = PremiumPayment(
+        policy_id=new_policy.id,
+        amount=data["premium_amount"],
+        due_date=start_date,
+        payment_status="pending"
+    )
+    db.session.add(first_payment)
+
+    customer_obj = Customer.query.get(data["customer_id"])
+    if customer_obj:
+        notify(customer_obj.user_id, f"Your {data['policy_type']} policy ({data['policy_number']}) has been created.", "policy_created")
+
     db.session.commit()
+        
 
     return jsonify({
         "message": "Policy created successfully",
@@ -167,6 +191,14 @@ def renew_policy(policy_id):
 
     policy.end_date = new_end_date
     policy.status = "active"  # reactivate if it was expired
+    if data.get("fulfilled_request_id"):
+        req = PolicyRequest.query.get(data["fulfilled_request_id"])
+        if req and req.status == "pending":
+            req.status = "approved"
+
+    customer_obj = Customer.query.get(policy.customer_id)
+    if customer_obj:
+        notify(customer_obj.user_id, f"Your policy {policy.policy_number} has been renewed until {new_end_date}.", "policy_created")
     db.session.commit()
 
     return jsonify({"message": "Policy renewed successfully", "new_end_date": str(policy.end_date)}), 200

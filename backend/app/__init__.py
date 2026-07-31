@@ -6,6 +6,8 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from app.config import Config
 
+    
+
 db = SQLAlchemy()
 migrate = Migrate()
 bcrypt = Bcrypt()
@@ -27,11 +29,17 @@ def create_app():
     from app.routes.claim_routes import claim_bp
     from app.routes.document_routes import document_bp
     from app.routes.report_routes import report_bp
+    from app.routes.my_routes import my_bp
+    from app.routes.policy_request_routes import request_bp
+    from app.routes.notification_routes import notification_bp
     app.register_blueprint(customer_bp)
     app.register_blueprint(policy_bp)
     app.register_blueprint(payment_bp)
     app.register_blueprint(claim_bp)
     app.register_blueprint(document_bp)
     app.register_blueprint(report_bp)
+    app.register_blueprint(my_bp)
+    app.register_blueprint(request_bp)
+    app.register_blueprint(notification_bp)
 
     return app

@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from app import db
 from app.models import Claim, Policy
 from app.utils import role_required
+from app.utils import notify
+from app.models import Customer
 
 claim_bp = Blueprint("claim_bp", __name__)
 
@@ -129,5 +131,8 @@ def review_claim(claim_id):
 
     claim.status = data["status"]
     db.session.commit()
-
+    policy_obj = Policy.query.get(claim.policy_id)
+    customer_obj = Customer.query.get(policy_obj.customer_id) if policy_obj else None
+    if customer_obj:
+        notify(customer_obj.user_id, f"Your claim on policy {policy_obj.policy_number} was {data['status']}.", "claim_reviewed")
     return jsonify({"message": f"Claim {data['status']} successfully"}), 200

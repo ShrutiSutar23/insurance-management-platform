@@ -8,7 +8,8 @@ class User(db.Model):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # admin, agent, customer
+    role = db.Column(db.String(20), nullable=False)
+    status = db.Column(db.String(20), default="pending")  # pending, approved, rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     customer = db.relationship("Customer", backref="user", uselist=False)
@@ -77,4 +78,32 @@ class Document(db.Model):
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     customer = db.relationship("Customer", backref="documents")
+
+class PolicyRequest(db.Model):
+    __tablename__ = "policy_requests"
+
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey("customers.id"), nullable=False)
+    request_type = db.Column(db.String(20), nullable=False)  # "new" or "renewal"
+    policy_id = db.Column(db.Integer, db.ForeignKey("policies.id"), nullable=True)  # only for renewal requests
+    policy_type = db.Column(db.String(50), nullable=True)  # only for new requests
+    desired_coverage = db.Column(db.Numeric(10, 2), nullable=True)  # only for new requests
+    notes = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(20), default="pending")  # pending, approved, rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    customer = db.relationship("Customer", backref="policy_requests")
+    policy = db.relationship("Policy", backref="renewal_requests")
+
+class Notification(db.Model):
+    __tablename__ = "notifications"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    message = db.Column(db.String(255), nullable=False)
+    notif_type = db.Column(db.String(30), nullable=False)  # policy_request, policy_created, payment_confirmed, claim_submitted, claim_reviewed
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="notifications")
 

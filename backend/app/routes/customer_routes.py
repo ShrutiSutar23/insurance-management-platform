@@ -40,7 +40,8 @@ def register_customer():
         name=data["name"],
         email=data["email"],
         password=hashed_password,
-        role="customer"
+        role="customer",
+        status="pending"
     )
     db.session.add(new_user)
     db.session.commit()  # commit here so new_user.id gets generated
@@ -160,10 +161,17 @@ def login():
     if "email" not in data or "password" not in data:
         return jsonify({"error": "email and password are required"}), 400
 
+
     user = User.query.filter_by(email=data["email"]).first()
 
     if not user or not bcrypt.check_password_hash(user.password, data["password"]):
         return jsonify({"error": "Invalid email or password"}), 401
+
+    if user.status == "pending":
+        return jsonify({"error": "Your account is pending approval by an administrator."}), 403
+
+    if user.status == "rejected":
+        return jsonify({"error": "Your registration was not approved. Please contact support."}), 403
 
     access_token = create_access_token(
         identity=str(user.id),
@@ -207,7 +215,8 @@ def admin_create_user():
         name=data["name"],
         email=data["email"],
         password=hashed_password,
-        role=data["role"]
+        role=data["role"],
+        status="approved"
     )
     db.session.add(new_user)
     db.session.commit()
@@ -228,3 +237,43 @@ def admin_create_user():
         "message": f"{data['role'].capitalize()} account created successfully",
         "user_id": new_user.id
     }), 201
+
+# 6. View all pending user approvals (Admin only)
+@customer_bp.route("/api/admin/pending-users", methods=["GET"])
+@role_required("admin")
+def get_pending_users():
+    pending_users = User.query.filter_by(status="pending").all()
+
+    result = []
+    for u in pending_users:
+        result.append({
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "role": u.role,
+            "created_at": str(u.created_at)
+        })
+
+    return jsonify(result), 200
+
+
+# 7. Approve or reject a pending user (Admin only)
+@customer_bp.route("/api/admin/users/<int:user_id>/decision", methods=["PUT"])
+@role_required("admin")
+def decide_user(user_id):
+    data = request.get_json()
+
+    if "decision" not in data or data["decision"] not in ["approved", "rejected"]:
+        return jsonify({"error": "decision must be 'approved' or 'rejected'"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if user.status != "pending":
+        return jsonify({"error": f"User already {user.status}"}), 400
+
+    user.status = data["decision"]
+    db.session.commit()
+
+    return jsonify({"message": f"User {data['decision']} successfully"}), 200

@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import jsonify
 from flask_jwt_extended import verify_jwt_in_request, get_jwt
+from app.models import Notification, User
 
 def role_required(*allowed_roles):
     def decorator(fn):
@@ -16,3 +17,16 @@ def role_required(*allowed_roles):
             return fn(*args, **kwargs)
         return wrapper
     return decorator
+
+def notify(user_id, message, notif_type):
+    from app import db
+    n = Notification(user_id=user_id, message=message, notif_type=notif_type)
+    db.session.add(n)
+    db.session.commit()
+
+def notify_all_staff(message, notif_type):
+    from app import db
+    staff = User.query.filter(User.role.in_(["admin", "agent"])).all()
+    for s in staff:
+        db.session.add(Notification(user_id=s.id, message=message, notif_type=notif_type))
+    db.session.commit()
