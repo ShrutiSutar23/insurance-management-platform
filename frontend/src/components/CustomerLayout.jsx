@@ -9,14 +9,6 @@ function CustomerLayout({ children }) {
   const location = useLocation();
 
   const handleLogout = () => {
-
-        <div className="flex items-center gap-4">
-          <NotificationBell />
-          <span className="text-sm text-slate-600">{user?.name}</span>
-          <button onClick={handleLogout} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-sm">
-            <LogOut size={16} /> Logout
-          </button>
-        </div>
     logout();
     navigate("/login");
   };
@@ -38,6 +30,7 @@ function CustomerLayout({ children }) {
           <p className="text-xs text-slate-400">Customer Portal</p>
         </div>
         <div className="flex items-center gap-4">
+          <NotificationBell />
           <span className="text-sm text-slate-600">{user?.name}</span>
           <button onClick={handleLogout} className="flex items-center gap-1.5 text-slate-500 hover:text-red-600 text-sm">
             <LogOut size={16} /> Logout

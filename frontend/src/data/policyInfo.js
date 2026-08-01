@@ -1,4 +1,4 @@
-import { HeartPulse, Users, Car, Home } from "lucide-react";
+import { HeartPulse, Users, Car, Home, ShieldCheck } from "lucide-react";
 
 const policyInfo = {
   "Health Insurance": {
@@ -42,7 +42,7 @@ export function getPolicyInfo(type) {
     benefits: ["Financial protection", "Claim support", "24/7 customer assistance"],
     startingPremium: 1000,
     color: "bg-slate-600",
-    icon: null,
+    icon: ShieldCheck,
   };
 }
 
