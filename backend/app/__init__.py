@@ -21,7 +21,11 @@ def create_app():
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, resources={r"/api/*": {"origins": [
+        "https://insurance-management-platform-ten.vercel.app",
+        "http://127.0.0.1:5173",
+        "http://localhost:5173"
+    ]}})
 
     from app.routes.customer_routes import customer_bp
     from app.routes.policy_routes import policy_bp
