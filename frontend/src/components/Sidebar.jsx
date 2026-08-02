@@ -27,7 +27,7 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-200 min-h-screen flex flex-col fixed left-0 top-0">
+    <aside className="w-64 bg-slate-900 text-slate-200 h-screen flex flex-col fixed left-0 top-0">
       <div className="px-6 py-6 border-b border-slate-800">
             <div className="px-6 py-6 border-b border-slate-800 flex items-center justify-between">
                 <div>
@@ -42,7 +42,7 @@ function Sidebar() {
         <p className="text-slate-400 text-xs mt-1">Management Platform</p>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
